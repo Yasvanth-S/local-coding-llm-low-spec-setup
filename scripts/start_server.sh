@@ -9,9 +9,13 @@
 #                          ~2.74GB fits entirely in a 4GB card)
 #   --cache-type-k/v q4_0  quantize the KV cache so more context fits in the
 #                          VRAM left over after the model weights
-#   --ctx-size             context window; pass as $1, default 8192. Push this
-#                          up (16384, 32768, ...) and re-run to find the largest
-#                          value that doesn't OOM on your card — see logs/.
+#   --ctx-size             context window; pass as $1, default 49152. On the
+#                          reference hardware (GTX 1650, 4GB VRAM) this model
+#                          was tested under real generation up to 57344 (3.6GB
+#                          used) before 65536 reliably OOM-crashed mid-inference
+#                          (not just at load). 49152 leaves a safer ~600MB
+#                          headroom margin than 57344's ~480MB. Your card may
+#                          differ — push the number up and re-run to re-check.
 #   --parallel 1           llama-server defaults to splitting --ctx-size across
 #                          4 parallel request "slots" (so --ctx-size 8192 would
 #                          actually give any one conversation only 2048 tokens).
@@ -28,7 +32,7 @@ source "$SCRIPT_DIR/lib_log.sh"
 
 LLAMA_SERVER="$ROOT_DIR/llama.cpp/build/bin/llama-server"
 MODEL="$ROOT_DIR/models/Qwen3.5-4B-Q4_K_M.gguf"
-CTX_SIZE="${1:-8192}"
+CTX_SIZE="${1:-49152}"
 LOG_DIR="$ROOT_DIR/logs"
 LOG_FILE="$LOG_DIR/server-ctx${CTX_SIZE}.log"
 

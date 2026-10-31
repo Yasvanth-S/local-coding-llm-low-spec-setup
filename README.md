@@ -67,8 +67,8 @@ multi-file refactors or subtle logic. That's the realistic bar for a few-GB mode
 # 2. Download the main coding model (~2.74 GB)
 ./scripts/download_models.sh
 
-# 3. Start the server (default context: 8192 tokens — see "Tuning context" below)
-./scripts/start_server.sh 8192
+# 3. Start the server (default context: 49152 tokens — see "Tuning context" below)
+./scripts/start_server.sh
 
 # 4. In another terminal, point aider at it
 cd aider && ../.venv/bin/aider --config .aider.conf.yml
@@ -78,17 +78,33 @@ No Hugging Face login is required — the model repos used here are public and u
 
 ### Tuning context size for your card
 
-`start_server.sh` takes the context size as its one argument. Start at 8192 and push
-up (`16384`, `32768`, ...) while watching:
+`start_server.sh` takes the context size as its one optional argument (default
+49152). On the reference hardware (GTX 1650, 4GB VRAM), empirically tested by
+actually running a generation at each size (loading alone isn't proof — see below):
+
+| Context | Result | VRAM used |
+|---|---|---|
+| 8192 | works | 2.9 GB |
+| 32768 | works | 3.3 GB |
+| 49152 | works (**default**) | 3.5 GB |
+| 57344 | works, but only ~480MB headroom left | 3.6 GB |
+| 65536 | **crashes** — OOM mid-inference, not at load | — |
+
+That last line is the important bit: the crash at 65536 happened *during generation*,
+not when the model loaded — loading can succeed and then abort partway through a
+response once the compute buffers grow. So when tuning this for your own card, don't
+stop at "it loaded" — actually run a generation through it:
 
 ```bash
+./scripts/start_server.sh <ctx-size>
 nvidia-smi    # VRAM usage — stay under ~3.8GB to leave headroom
 free -h       # make sure you're not swapping heavily
+# then actually send it a real prompt (e.g. through aider) before trusting the number
 ```
 
 Each run's log lands in `logs/server-ctx<N>.log` so you can compare. Whatever the
-largest stable value turns out to be on your hardware, that's your real number — not
-a guess.
+largest value that survives a real generation on your hardware, that's your real
+number — not a guess.
 
 ## Optional: vision / PDF-page input
 
@@ -140,8 +156,9 @@ it cleanly. Numbers below are from that run (`logs/server-ctx8192.log`,
 
 | Metric | Value |
 |---|---|
-| Context size tested | 8192 tokens, single slot (`--parallel 1`) |
-| VRAM used | ~2.9 GB / 4 GB |
+| Context sizes tested under real generation | 8192 through 57344 (all passed); 65536 OOM-crashed |
+| Default context used | 49152 tokens, single slot (`--parallel 1`) |
+| VRAM used at 49152 | ~3.5 GB / 4 GB |
 | Prompt processing | ~150-190 tokens/sec |
 | Generation | ~36-38 tokens/sec |
 | Build time (llama.cpp, `BUILD_JOBS=2`) | ~20 min |
