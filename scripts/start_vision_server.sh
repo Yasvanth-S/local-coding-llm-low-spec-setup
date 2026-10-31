@@ -41,6 +41,7 @@ exec "$LLAMA_SERVER" \
   --model "$MODEL" \
   --mmproj "$MMPROJ" \
   --ctx-size "$CTX_SIZE" \
+  --parallel 1 \
   --cache-type-k q4_0 \
   --cache-type-v q4_0 \
   -ngl 999 \

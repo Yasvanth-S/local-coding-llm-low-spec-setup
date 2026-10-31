@@ -12,6 +12,11 @@
 #   --ctx-size             context window; pass as $1, default 8192. Push this
 #                          up (16384, 32768, ...) and re-run to find the largest
 #                          value that doesn't OOM on your card — see logs/.
+#   --parallel 1           llama-server defaults to splitting --ctx-size across
+#                          4 parallel request "slots" (so --ctx-size 8192 would
+#                          actually give any one conversation only 2048 tokens).
+#                          We only ever have one aider session talking to this
+#                          server, so pin to 1 slot and give it the full window.
 #
 # Usage: ./start_server.sh [ctx-size]
 set -euo pipefail
@@ -42,6 +47,7 @@ log "Watch 'nvidia-smi' and 'free -h' in another terminal to confirm this fits."
 exec "$LLAMA_SERVER" \
   --model "$MODEL" \
   --ctx-size "$CTX_SIZE" \
+  --parallel 1 \
   --cache-type-k q4_0 \
   --cache-type-v q4_0 \
   -ngl 999 \

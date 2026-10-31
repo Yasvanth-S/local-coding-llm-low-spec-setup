@@ -133,4 +133,22 @@ local-coding-llm-low-spec-setup/
 
 ## Results observed on the reference hardware
 
-_Filled in after running the end-to-end test — see `logs/` for the raw transcripts._
+End-to-end tested: built, served, and used through aider to add a function to a
+scratch file. Aider produced a valid SEARCH/REPLACE diff on the first try and applied
+it cleanly. Numbers below are from that run (`logs/server-ctx8192.log`,
+`logs/aider-test-session.log`):
+
+| Metric | Value |
+|---|---|
+| Context size tested | 8192 tokens, single slot (`--parallel 1`) |
+| VRAM used | ~2.9 GB / 4 GB |
+| Prompt processing | ~150-190 tokens/sec |
+| Generation | ~36-38 tokens/sec |
+| Build time (llama.cpp, `BUILD_JOBS=2`) | ~20 min |
+
+One thing worth flagging if you adapt these scripts: llama-server defaults to
+splitting `--ctx-size` across 4 parallel request slots, so e.g. `--ctx-size 8192`
+would actually give any single conversation only ~2048 tokens unless you also pass
+`--parallel 1`. Both server scripts here already set it, since there's only ever one
+aider session talking to the server — but it's an easy thing to miss if you tweak the
+flags.
