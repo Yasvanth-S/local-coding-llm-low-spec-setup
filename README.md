@@ -152,3 +152,7 @@ would actually give any single conversation only ~2048 tokens unless you also pa
 `--parallel 1`. Both server scripts here already set it, since there's only ever one
 aider session talking to the server — but it's an easy thing to miss if you tweak the
 flags.
+
+## License
+
+[MIT](LICENSE) — use, modify, and share freely.
