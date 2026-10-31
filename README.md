@@ -38,11 +38,10 @@ chasing a huge context number that can't fit anyway.
 
 ## Model choice, with sources
 
-Three candidates were compared before settling on one:
+Two candidates were compared before settling on one:
 
 | Model | Verdict | Why |
 |---|---|---|
-| `HauhauCS/Qwen3.8-27B-Uncensored-...-GGUF` | **Ruled out** | Third-party 27B finetune. No published benchmarks. Smallest quant is 10.3 GB — doesn't fit 4GB VRAM or 6.6GB total RAM. Its "FastMTP-32K" sidecar (903MB) is **not a smaller model** — it's a speculative-decoding draft that still requires the full 10.3GB+ base model loaded alongside it; it only changes speed, not memory footprint. |
 | `Qwen/Qwen2.5-Coder-3B-Instruct` | Fallback | Official code-specialized model (Sept 2024). Official technical report ([arXiv:2409.12186](https://arxiv.org/abs/2409.12186), Table 16): **HumanEval 84.1%, MBPP 73.6%, LiveCodeBench pass@1 10.8%**. |
 | **`unsloth/Qwen3.5-4B-GGUF`** | **Chosen** | Real official Alibaba model (released March 2026), dense, ~5B params, ~2.74GB at Q4_K_M. Sourced benchmark: **LiveCodeBench v6 = 55.8%** pass@1 ([llm-stats.com](https://llm-stats.com/models/compare/qwen3-235b-a22b-instruct-2507-vs-qwen3.5-4b)), Intelligence Index reasoning score 27 ([artificialanalysis.ai](https://artificialanalysis.ai/articles/qwen3-5-small-models)). |
 
