@@ -1,0 +1,8 @@
+models/
+llama.cpp/
+*.gguf
+logs/*.log
+__pycache__/
+*.pyc
+.aider*
+!aider/.aider.conf.yml

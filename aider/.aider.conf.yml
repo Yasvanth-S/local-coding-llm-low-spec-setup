@@ -1,0 +1,26 @@
+# aider config for the local Qwen3.5-4B coding setup.
+# Point aider at the local llama-server OpenAI-compatible endpoint:
+#   openai-api-base: http://127.0.0.1:8080/v1
+#   model: openai/qwen3.5-4b   (name is arbitrary for a local server, but must be
+#                               prefixed with "openai/" so aider uses the OpenAI
+#                               client against our base URL)
+openai-api-base: http://127.0.0.1:8080/v1
+openai-api-key: "sk-no-key-required"
+model: openai/qwen3.5-4b
+
+# Diff-based edit format tends to be more reliable than whole-file rewrites for a
+# small quantized model. Switch to "whole" here (and retest) if the model struggles
+# to produce valid diffs.
+edit-format: diff
+
+# Theme — dark, high-contrast, approximating opencode's look as closely as aider's
+# CLI (not a full TUI) allows.
+dark-mode: true
+code-theme: monokai
+user-input-color: "#61AFEF"
+assistant-output-color: "#98C379"
+tool-output-color: "#5C6370"
+
+auto-commits: false
+pretty: true
+stream: true
