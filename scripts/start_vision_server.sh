@@ -19,7 +19,12 @@ source "$SCRIPT_DIR/lib_log.sh"
 LLAMA_SERVER="$ROOT_DIR/llama.cpp/build/bin/llama-server"
 MODEL="$ROOT_DIR/models/Qwen3.5-2B-Q4_K_M.gguf"
 MMPROJ="$ROOT_DIR/models/mmproj-F16.gguf"
-CTX_SIZE="${1:-16384}"
+# Tested under real image-generation requests on the reference hardware (GTX
+# 1650, 4GB VRAM): 16384 through 229376 all work; 262144 OOM-crashed mid-request
+# (not just at load — it logged a failed CUDA buffer alloc, then segfaulted on
+# the first real request). 196608 is the default: same safety-margin philosophy
+# as start_server.sh (~630MB headroom vs. 229376's tighter ~420MB).
+CTX_SIZE="${1:-196608}"
 LOG_DIR="$ROOT_DIR/logs"
 LOG_FILE="$LOG_DIR/vision-server-ctx${CTX_SIZE}.log"
 

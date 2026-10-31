@@ -120,15 +120,34 @@ cache:
 |---|---|---|---|
 | Qwen3.5-4B Q4_K_M | 2.74 GB | 3.41 GB | ~0.2-0.4 GB → only ~2-4k ctx |
 | Qwen3.5-4B Q3_K_M | 2.29 GB | 2.96 GB | ~0.6-0.8 GB → maybe ~8k ctx |
-| **Qwen3.5-2B Q4_K_M** | **1.28 GB** | **1.95 GB** | **~1.6-1.8 GB → ~16-32k ctx** |
+| **Qwen3.5-2B Q4_K_M** | **1.28 GB** | **1.95 GB** | **far more — tested up to 196k+, see below** |
 
 This repo ships the 2B+mmproj combination as a **separate profile** on a different
 port, so it doesn't compromise the main coding setup:
 
 ```bash
 WITH_VISION=1 ./scripts/download_models.sh
-./scripts/start_vision_server.sh 16384   # serves on :8081, main coder stays on :8080
+./scripts/start_vision_server.sh    # defaults to 196608, serves on :8081
 ```
+
+**Real numbers beat the back-of-envelope estimate.** The table above was a rough
+projection; actually testing it (loading the model *and* sending it a real image
+request, since a crash can happen mid-generation rather than at load) found the
+ceiling is much higher than guessed — the smaller 2B text model leaves so much more
+headroom that context can go well into six figures before it breaks:
+
+| Context | Result | VRAM used |
+|---|---|---|
+| 16384 | works | 2.3 GB |
+| 32768 | works | 2.4 GB |
+| 131072 | works | 3.1 GB |
+| 196608 | works (**default**) | 3.5 GB |
+| 229376 | works, but only ~420MB headroom left | 3.7 GB |
+| 262144 | **crashes** — failed CUDA alloc, then segfaults on the first real request | — |
+
+Same lesson as the main profile: a model that "loads" at some context size isn't
+proof it's stable — 262144 loaded and started listening, then died on the first
+actual image request. Always send it a real request before trusting a context size.
 
 ## Project layout
 
