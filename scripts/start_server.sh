@@ -57,4 +57,5 @@ exec "$LLAMA_SERVER" \
   -ngl 999 \
   --host 127.0.0.1 \
   --port 8080 \
+  --jinja \
   2>&1 | tee "$LOG_FILE"

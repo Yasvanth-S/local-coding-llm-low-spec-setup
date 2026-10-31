@@ -111,43 +111,55 @@ number — not a guess.
 `llama.cpp`'s multimodal support reads **images**, not PDF text directly — render PDF
 pages to images first (e.g. `pdftoppm`) before feeding them in.
 
-Adding a vision tower (`mmproj`) costs the same ~0.67GB regardless of which text model
-it's paired with, since the vision encoder size doesn't change. That means pairing it
-with the smaller Qwen3.5-2B instead of the 4B leaves dramatically more VRAM for KV
-cache:
+**Important correction from an earlier draft of this README:** `mmproj` files are
+**not interchangeable across model sizes**. Each text model has its own matching
+`mmproj` (the projector layer's dimensions depend on the LLM's hidden size), and
+using the wrong one fails loudly (`mismatch between text model (n_embd = ...) and
+mmproj (n_embd = ...)`) or, worse, loads but then segfaults on the first real request.
+Always download the `mmproj` from the *same* repo as the text model you're pairing it
+with.
 
-| Setup | Text weights | + mmproj-F16 | VRAM left for KV cache |
-|---|---|---|---|
-| Qwen3.5-4B Q4_K_M | 2.74 GB | 3.41 GB | ~0.2-0.4 GB → only ~2-4k ctx |
-| Qwen3.5-4B Q3_K_M | 2.29 GB | 2.96 GB | ~0.6-0.8 GB → maybe ~8k ctx |
-| **Qwen3.5-2B Q4_K_M** | **1.28 GB** | **1.95 GB** | **far more — tested up to 196k+, see below** |
-
-This repo ships the 2B+mmproj combination as a **separate profile** on a different
-port, so it doesn't compromise the main coding setup:
+This repo ships the Qwen3.5-2B + its own mmproj as a **separate profile** on a
+different port, so it doesn't compromise the main coding setup:
 
 ```bash
 WITH_VISION=1 ./scripts/download_models.sh
 ./scripts/start_vision_server.sh    # defaults to 196608, serves on :8081
 ```
 
-**Real numbers beat the back-of-envelope estimate.** The table above was a rough
-projection; actually testing it (loading the model *and* sending it a real image
-request, since a crash can happen mid-generation rather than at load) found the
-ceiling is much higher than guessed — the smaller 2B text model leaves so much more
-headroom that context can go well into six figures before it breaks:
+### Full benchmark: all three text-model variants, with and without vision
 
-| Context | Result | VRAM used |
+Tested under real generation requests (not just model load) on the reference
+hardware. "Max stable context" means the largest value that survived an actual
+request — several of these loaded fine at higher values and then crashed or
+segfaulted the first time they were asked to generate something, which is why load
+success alone isn't trusted anywhere in this README.
+
+**Text-only:**
+
+| Model | Weights | Gen speed | Prompt speed | Max stable context |
+|---|---|---|---|---|
+| Qwen3.5-4B Q4_K_M | 2.74 GB | 37.7 tok/s | ~150-190 tok/s | 57344 (crashes at 65536) |
+| Qwen3.5-4B Q3_K_S | 2.11 GB | 28.7 tok/s | ~80.9 tok/s | 98304 (fails cleanly at 114688) |
+| Qwen3.5-2B Q4_K_M | 1.28 GB | 64.2 tok/s | ~146.2 tok/s | 262144 (its full native training context — works) |
+
+Note Q3_K_S is *slower* than Q4_K_M despite being 23% smaller — llama.cpp's CUDA
+kernels for Q4_K_M are more optimized than for Q3_K_S on this GPU, so the extra
+dequantization overhead outweighs the memory savings. Smaller quant doesn't
+automatically mean faster.
+
+**With vision (model + its size-matched mmproj):**
+
+| Model + mmproj | VRAM | Max stable context |
 |---|---|---|
-| 16384 | works | 2.3 GB |
-| 32768 | works | 2.4 GB |
-| 131072 | works | 3.1 GB |
-| 196608 | works (**default**) | 3.5 GB |
-| 229376 | works, but only ~420MB headroom left | 3.7 GB |
-| 262144 | **crashes** — failed CUDA alloc, then segfaults on the first real request | — |
+| Qwen3.5-4B Q4_K_M + mmproj | 3.6-3.7 GB | **doesn't work at all** — crashes even at the minimum (8192) |
+| Qwen3.5-4B Q3_K_S + mmproj | 3.3-3.5 GB | 32768 (crashes at 49152) |
+| Qwen3.5-2B Q4_K_M + mmproj | 2.3-3.5 GB | 229376 (crashes at 262144) |
 
-Same lesson as the main profile: a model that "loads" at some context size isn't
-proof it's stable — 262144 loaded and started listening, then died on the first
-actual image request. Always send it a real request before trusting a context size.
+The practical takeaway: on 4GB VRAM, **Q4_K_M + vision isn't an option at all** — the
+text model alone leaves too little room for the vision compute buffer, regardless of
+context size. If you want vision on hardware this tight, use Q3_K_S or the 2B model,
+not Q4_K_M.
 
 ## Project layout
 
